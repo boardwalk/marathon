@@ -1,3 +1,4 @@
+"""Facilitates proxying of data between TCP clients and a server"""
 import asyncore
 import socket
 
@@ -6,13 +7,13 @@ class Endpoint(asyncore.dispatcher):
     asyncore.dispatcher.__init__(self)
     self.session = session
     self.callback = callback
-    self.indata = ""
-    self.outdata = ""
+    self.indata = bytearray()
+    self.outdata = bytearray()
 
   def handle_read(self):
     newdata = self.recv(4096)
     if len(newdata) != 0:
-      self.indata = self.indata + newdata
+      self.indata.extend(newdata)
       self.callback()
     else:
       self.session.close()
