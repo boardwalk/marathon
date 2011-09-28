@@ -28,16 +28,27 @@ class Endpoint(asyncore.dispatcher):
 class Session:
   """Instantiated by Listener to pump data between two endpoints
 
-  Subclass this and override the handle_* methods"""
-
+  Subclass this and override the unimplemented methods"""
   def __init__(self):
     self.client = Endpoint(self, self.handle_client_read)
     self.server = Endpoint(self, self.handle_server_read)
 
   def close(self):
     self.handle_close()
-    self.client.close()
-    self.server.close()
+    if self.client.socket:
+      self.client.close()
+    if self.server.socket:
+      self.server.close()
+
+  def get_client_addr(self):
+    """Returns the address connected to on the client side"""
+    return self.client.socket.getpeername()
+
+  def get_server_addr(self):
+    """Returns the address to connect to on the server side
+
+    If None, the session is closed by the Listener"""
+    raise NotImplementedError
 
   def handle_client_read(self):
     """Called when data is received from the client
@@ -60,25 +71,27 @@ class Session:
 class Listener(asyncore.dispatcher):
   """Listens for connections and creates sessions"""
 
-  def __init__(self, sessioncls, localaddr, remoteaddr):
+  def __init__(self, sessioncls, listenaddr):
     """Construct a proxy for the given remoteaddr on the given localaddr
 
     sessioncls -- A subclass of Session
-    localaddr -- The local address to bind to
-    remoteaddr -- The remote addr to connect to
+    listenaddr -- The address to bind to
     """
     asyncore.dispatcher.__init__(self)
     self.sessioncls = sessioncls
-    self.remoteaddr = remoteaddr
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
     self.set_reuse_addr()
-    self.bind(localaddr)
+    self.bind(listenaddr)
     self.listen(1)
 
   def handle_accept(self):
     clientsock, _ = self.accept()
     session = self.sessioncls()
     session.client.set_socket(clientsock)
-    session.server.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-    session.server.connect(self.remoteaddr)
+    serveraddr = session.get_server_addr()
+    if serveraddr:
+      session.server.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+      session.server.connect(serveraddr)
+    else:
+      session.close()
 

@@ -8,6 +8,9 @@ class LoginSession(proxy.Session):
     proxy.Session.__init__(self)
     logging.info("Session opened")
 
+  def get_server_addr(self):
+    return settings.LOGIN_SERVER_ADDR
+
   def handle_client_read(self):
     logging.info("Pumping %d client bytes", len(self.client.indata))
     self.server.outdata.extend(self.client.indata)
@@ -23,7 +26,7 @@ class LoginSession(proxy.Session):
 
 def main():
   logging.basicConfig(level=logging.DEBUG)
-  listener = proxy.Listener(LoginSession, settings.LISTENADDR, settings.SERVERADDR)
+  listener = proxy.Listener(LoginSession, settings.LOGIN_LISTEN_ADDR)
   asyncore.loop()
 
 if __name__ == '__main__':

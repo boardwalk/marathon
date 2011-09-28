@@ -1,3 +1,4 @@
-SERVERADDR = ("www.google.com", 80)
-LISTENADDR = ("", 3000)
+
+LOGIN_SERVER_ADDR = ("www.google.com", 80)
+LOGIN_LISTEN_ADDR = ("", 3000)
 
