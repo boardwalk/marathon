@@ -88,9 +88,11 @@ class Listener(asyncore.dispatcher):
     clientsock, _ = self.accept()
     session = self.sessioncls()
     session.client.set_socket(clientsock)
+    session.client.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     serveraddr = session.get_server_addr()
     if serveraddr:
       session.server.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+      session.server.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
       session.server.connect(serveraddr)
     else:
       session.close()
