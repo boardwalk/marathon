@@ -1,4 +1,4 @@
 
-LOGIN_SERVER_ADDR = ("www.google.com", 80)
-LOGIN_LISTEN_ADDR = ("", 3000)
+LOGIN_LISTEN_ADDR = ("", 6112)
+LOGIN_SERVER_ADDR = ("auth1.arenanetworks.com", 6112)
 
