@@ -2,6 +2,7 @@ import asyncore
 import logging
 import proxy
 import settings
+import tools
 
 class LoginSession(proxy.Session):
   def __init__(self):
@@ -13,11 +14,13 @@ class LoginSession(proxy.Session):
 
   def handle_client_read(self):
     logging.info("Pumping %d client bytes", len(self.client.indata))
+    tools.dump(self.client.indata)
     self.server.outdata.extend(self.client.indata)
     self.client.indata = bytearray()
 
   def handle_server_read(self):
     logging.info("Pumping %d server bytes", len(self.server.indata))
+    tools.dump(self.server.indata)
     self.client.outdata.extend(self.server.indata)
     self.server.indata = bytearray()
 
