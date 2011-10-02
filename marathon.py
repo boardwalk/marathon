@@ -1,4 +1,5 @@
 import asyncore
+import copy
 import logging
 import os
 import struct
@@ -75,8 +76,6 @@ class LoginSession(proxy.Session):
     logging.info("Session opened")
     self.state = "client_challenge"
     self.crypt_file_mtime = self.get_crypt_file_mtime()
-    self.client_decrypt = None
-    self.server_decrypt = None
 
   def get_server_addr(self):
     return settings.LOGIN_SERVER_ADDR
@@ -92,13 +91,15 @@ class LoginSession(proxy.Session):
       return 0.0
 
   def init_decrypt(self):
-    if self.client_decrypt:
+    if hasattr(self, "client_decrypt"):
       return
     while self.crypt_file_mtime == self.get_crypt_file_mtime():
       logging.info("Waiting for crypt file to be written...")
       time.sleep(1)
     self.client_decrypt = RC4.from_file(self.KEY_FILE)
-    self.server_decrypt = RC4.from_file(self.KEY_FILE)
+    self.client_encrypt = copy.deepcopy(self.client_decrypt)
+    self.server_decrypt = copy.deepcopy(self.client_decrypt)
+    self.server_encrypt = copy.deepcopy(self.client_decrypt)
 
   def handle_client_read(self):
     if len(self.client.indata) == 0:
@@ -111,9 +112,9 @@ class LoginSession(proxy.Session):
         self.repump()
     elif self.state == "connected":
       self.init_decrypt()
-      buf = bytearray(self.client.indata)
-      self.client_decrypt.crypt(buf)
-      tools.dump(buf)
+      self.client_decrypt.crypt(self.client.indata)
+      tools.dump(self.client.indata)
+      self.server_encrypt.crypt(self.client.indata)
       pump_data(self.client, self.server)
 
   def handle_server_read(self):
@@ -127,9 +128,9 @@ class LoginSession(proxy.Session):
         self.repump()
     elif self.state == "connected":
       self.init_decrypt()
-      buf = bytearray(self.server.indata)
-      self.server_decrypt.crypt(buf)
-      tools.dump(buf)
+      self.server_decrypt.crypt(self.server.indata)
+      tools.dump(self.server.indata)
+      self.client_encrypt.crypt(self.server.indata)
       pump_data(self.server, self.client)
 
   def handle_close(self):
