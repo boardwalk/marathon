@@ -56,8 +56,10 @@ class RC4:
     cls.test_one("Wiki", "pedia", "1021BF0420")
     cls.test_one("Secret", "Attack at dawn", "45A01F645FC35B383552544B9BF5")
 
-  def crypt(self, data):
-    for i in range(len(data)):
+  def crypt(self, data, begin = 0, end = -1):
+    if end < 0:
+      end += len(data) + 1
+    for i in range(begin, end):
       data[i] ^= self.get()
 
   def get(self):
@@ -100,6 +102,16 @@ class LoginSession(proxy.Session):
     self.client_encrypt = copy.deepcopy(self.client_decrypt)
     self.server_decrypt = copy.deepcopy(self.client_decrypt)
     self.server_encrypt = copy.deepcopy(self.client_decrypt)
+    self.client_bytes_decrypted = 0
+    self.server_bytes_decrypted = 0
+
+  def process_client(self):
+    tools.dump(self.client.indata)
+    return len(self.client.indata)
+
+  def process_server(self):
+    tools.dump(self.server.indata)
+    return len(self.server.indata)
 
   def handle_client_read(self):
     if len(self.client.indata) == 0:
@@ -112,10 +124,11 @@ class LoginSession(proxy.Session):
         self.repump()
     elif self.state == "connected":
       self.init_decrypt()
-      self.client_decrypt.crypt(self.client.indata)
-      tools.dump(self.client.indata)
-      self.server_encrypt.crypt(self.client.indata)
-      pump_data(self.client, self.server)
+      self.client_decrypt.crypt(self.client.indata, self.client_bytes_decrypted)
+      bytes_consumed = self.process_client()
+      self.server_encrypt.crypt(self.client.indata, 0, bytes_consumed)
+      pump_data(self.client, self.server, bytes_consumed)
+      self.client_bytes_decrypted = len(self.client.indata)
 
   def handle_server_read(self):
     if len(self.server.indata) == 0:
@@ -128,10 +141,11 @@ class LoginSession(proxy.Session):
         self.repump()
     elif self.state == "connected":
       self.init_decrypt()
-      self.server_decrypt.crypt(self.server.indata)
-      tools.dump(self.server.indata)
-      self.client_encrypt.crypt(self.server.indata)
-      pump_data(self.server, self.client)
+      self.server_decrypt.crypt(self.server.indata, self.server_bytes_decrypted)
+      bytes_consumed = self.process_server()
+      self.client_encrypt.crypt(self.server.indata, 0, bytes_consumed)
+      pump_data(self.server, self.client, bytes_consumed)
+      self.server_bytes_decrypted = len(self.server.indata)
 
   def handle_close(self):
     logging.info("Session closed")
