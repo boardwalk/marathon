@@ -18,10 +18,42 @@ def pump_data(src, dst, numbytes = -1):
   logging.info("Pumped %d bytes from %s to %s", numbytes, src_name, dst_name)
 
 class RC4:
-  def __init__(self, path):
+  def __init__(self, x, y, S):
+    self.x = x
+    self.y = y
+    self.S = bytearray(S)
+
+  @classmethod
+  def from_file(cls, path):
     with open(path) as f:
-      self.x, self.y, self.S = struct.unpack("II256s", f.read())
-      self.S = bytearray(self.S)
+      x, y, S = struct.unpack("II256s", f.read())
+      return cls(x, y, S)
+
+  @classmethod
+  def from_key(cls, key):
+    key = bytearray(key)
+    S = bytearray(256)
+    for i in range(len(S)):
+      S[i] = i
+    j = 0
+    for i in range(len(S)):
+      j = (j + S[i] + key[i % len(key)]) % 256
+      S[i], S[j] = S[j], S[i]
+    return cls(0, 0, S)
+
+  @classmethod
+  def test_one(cls, key, plaintext, ciphertext):
+    rc4 = cls.from_key(key)
+    data = bytearray(plaintext)
+    rc4.crypt(data)
+    if data != ciphertext.decode("hex"):
+      raise RuntimeError
+
+  @classmethod
+  def test(cls):
+    cls.test_one("Key", "Plaintext", "BBF316E8D940AF0AD3")
+    cls.test_one("Wiki", "pedia", "1021BF0420")
+    cls.test_one("Secret", "Attack at dawn", "45A01F645FC35B383552544B9BF5")
 
   def crypt(self, data):
     for i in range(len(data)):
@@ -30,7 +62,7 @@ class RC4:
   def get(self):
     self.x = (self.x + 1) % 256
     self.y = (self.y + self.S[self.x]) % 256
-    self.x, self.y = self.y, self.x
+    self.S[self.x], self.S[self.y] = self.S[self.y], self.S[self.x]
     return self.S[(self.S[self.x] + self.S[self.y]) % 256]
 
 class LoginSession(proxy.Session):
@@ -65,8 +97,8 @@ class LoginSession(proxy.Session):
     while self.crypt_file_mtime == self.get_crypt_file_mtime():
       logging.info("Waiting for crypt file to be written...")
       time.sleep(1)
-    self.client_decrypt = RC4(self.KEY_FILE)
-    self.server_decrypt = RC4(self.KEY_FILE)
+    self.client_decrypt = RC4.from_file(self.KEY_FILE)
+    self.server_decrypt = RC4.from_file(self.KEY_FILE)
 
   def handle_client_read(self):
     if len(self.client.indata) == 0:
