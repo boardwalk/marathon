@@ -54,12 +54,20 @@ class LoginSession(proxy.Session):
     self.client_bytes_decrypted = 0
     self.server_bytes_decrypted = 0
 
+  def log_packet(self, src):
+    tm = time.time()
+    msecs = (tm - long(tm)) * 1000
+    src_name, _ = src.getpeername()
+    fn = "packet_%s.%03d_%s.dat" % (time.strftime("%Y.%m.%d_%H.%M.%S", time.localtime(tm)), msecs, src_name)
+    with open(fn, "wb") as f:
+      f.write(src.indata)
+
   def process_client(self):
-    logging.debug("Client data:\n" + tools.dump(self.client.indata))
+    self.log_packet(self.client)
     return len(self.client.indata)
 
   def process_server(self):
-    logging.debug("Server data:\n" + tools.dump(self.server.indata))
+    self.log_packet(self.server)
     return len(self.server.indata)
 
   def handle_client_read(self):
