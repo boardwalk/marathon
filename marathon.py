@@ -106,11 +106,11 @@ class LoginSession(proxy.Session):
     self.server_bytes_decrypted = 0
 
   def process_client(self):
-    tools.dump(self.client.indata)
+    logging.debug("Client data:\n" + tools.dump(self.client.indata))
     return len(self.client.indata)
 
   def process_server(self):
-    tools.dump(self.server.indata)
+    logging.debug("Server data:\n" + tools.dump(self.server.indata))
     return len(self.server.indata)
 
   def handle_client_read(self):
