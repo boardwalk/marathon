@@ -1,6 +1,6 @@
 import logging
 
-BYTES_PER_LINE = 16
+BYTES_PER_LINE = 32
 
 def dump(data):
   hex_part = ""

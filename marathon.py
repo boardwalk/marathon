@@ -112,9 +112,8 @@ class LoginSession(proxy.Session):
     elif self.state == "connected":
       self.init_decrypt()
       buf = bytearray(self.client.indata)
-      logging.debug("Client before:"); tools.dump(buf)
       self.client_decrypt.crypt(buf)
-      logging.debug("Client after:"); tools.dump(buf)
+      tools.dump(buf)
       pump_data(self.client, self.server)
 
   def handle_server_read(self):
@@ -129,9 +128,8 @@ class LoginSession(proxy.Session):
     elif self.state == "connected":
       self.init_decrypt()
       buf = bytearray(self.server.indata)
-      logging.debug("Server before:"); tools.dump(buf)
       self.server_decrypt.crypt(buf)
-      logging.debug("Server after:"); tools.dump(buf)
+      tools.dump(buf)
       pump_data(self.server, self.client)
 
   def handle_close(self):
